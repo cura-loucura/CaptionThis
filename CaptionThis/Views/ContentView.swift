@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Translation
 
 struct ContentView: View {
     @State private var viewModel = CaptionViewModel()

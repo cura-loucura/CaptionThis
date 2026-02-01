@@ -83,6 +83,19 @@ struct HeaderView: View {
                     .frame(width: 200)
                 }
 
+                // Translation download status
+                if !viewModel.translationStatus.isEmpty {
+                    HStack(spacing: 6) {
+                        if viewModel.isPreparingTranslation {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(viewModel.translationStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Spacer()
 
                 // Pin toggle

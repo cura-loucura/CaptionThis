@@ -81,6 +81,49 @@ actor TranslationService {
         return await availability.status(from: sourceLocale, to: targetLocale)
     }
 
+    /// Returns a list of language pair descriptions that need downloading.
+    /// For a direct pair, returns one entry. For a two-hop pair (via English),
+    /// returns up to two entries — one for each leg that isn't installed.
+    func requiredDownloads(
+        from source: SupportedLanguage,
+        to target: SupportedLanguage
+    ) async -> [String] {
+        guard source != target else { return [] }
+
+        let availability = LanguageAvailability()
+        let sourceLocale = Locale.Language(identifier: source.languageCode)
+        let targetLocale = Locale.Language(identifier: target.languageCode)
+
+        let directStatus = await availability.status(from: sourceLocale, to: targetLocale)
+
+        if directStatus == .installed {
+            return []
+        }
+        if directStatus == .supported {
+            return ["\(source.displayName) → \(target.displayName)"]
+        }
+
+        // Unsupported direct — check two-hop through English
+        guard source != .english && target != .english else {
+            return [] // unsupported and can't two-hop
+        }
+
+        var needed: [String] = []
+        let englishLocale = Locale.Language(identifier: SupportedLanguage.english.languageCode)
+
+        let leg1 = await availability.status(from: sourceLocale, to: englishLocale)
+        if leg1 == .supported {
+            needed.append("\(source.displayName) → English")
+        }
+
+        let leg2 = await availability.status(from: englishLocale, to: targetLocale)
+        if leg2 == .supported {
+            needed.append("English → \(target.displayName)")
+        }
+
+        return needed
+    }
+
     /// Invalidates cached sessions (e.g., on language change).
     func invalidateSessions() {
         sessions.removeAll()

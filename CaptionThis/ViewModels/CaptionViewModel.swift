@@ -1,5 +1,6 @@
 import SwiftUI
 import ScreenCaptureKit
+import Translation
 
 @MainActor
 @Observable
@@ -10,6 +11,12 @@ final class CaptionViewModel {
     var errorMessage: String = ""
     var showError: Bool = false
     var availableApps: [SCRunningApplication] = []
+    var translationStatus: String = ""
+    var isPreparingTranslation: Bool = false
+    var translationConfig: TranslationSession.Configuration?
+
+    /// Queue of language pair legs that still need downloading (for two-hop pairs).
+    private var pendingDownloadLegs: [(source: Locale.Language, target: Locale.Language, label: String)] = []
 
     // MARK: - Segment-Based History
 
@@ -230,6 +237,7 @@ final class CaptionViewModel {
         if settings.captionEnabled {
             Task { await prepareTranslation() }
         } else {
+            translationStatus = ""
             inProgressTranslation = ""
             activeTranslation = ""
         }
@@ -238,7 +246,30 @@ final class CaptionViewModel {
     func loadAvailableApps() async {
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            availableApps = content.applications.filter { !$0.applicationName.isEmpty }
+
+            // Apps that own at least one window (can actually produce capturable audio)
+            let appsWithWindows = Set(
+                content.windows.compactMap { $0.owningApplication?.bundleIdentifier }
+            )
+
+            // Regular activation policy = appears in the Dock, is user-facing.
+            // Filters out background agents, menu bar accessories, and system daemons.
+            let regularApps = Set(
+                NSWorkspace.shared.runningApplications
+                    .filter { $0.activationPolicy == .regular }
+                    .compactMap { $0.bundleIdentifier }
+            )
+
+            let ownBundleID = Bundle.main.bundleIdentifier ?? ""
+
+            availableApps = content.applications
+                .filter { app in
+                    !app.applicationName.isEmpty
+                    && app.bundleIdentifier != ownBundleID
+                    && appsWithWindows.contains(app.bundleIdentifier)
+                    && regularApps.contains(app.bundleIdentifier)
+                }
+                .sorted { $0.applicationName.localizedCaseInsensitiveCompare($1.applicationName) == .orderedAscending }
 
             // Restore saved audio source
             if settings.audioSourceID != AudioSource.microphone.id {
@@ -351,15 +382,125 @@ final class CaptionViewModel {
     }
 
     private func prepareTranslation() async {
-        guard settings.captionEnabled else { return }
+        guard settings.captionEnabled else {
+            translationStatus = ""
+            return
+        }
+
+        guard settings.inputLanguage != settings.captionLanguage else {
+            translationStatus = ""
+            return
+        }
+
+        isPreparingTranslation = true
+
+        let availability = LanguageAvailability()
+        let sourceLocale = Locale.Language(identifier: settings.inputLanguage.languageCode)
+        let targetLocale = Locale.Language(identifier: settings.captionLanguage.languageCode)
+
+        let directStatus = await availability.status(from: sourceLocale, to: targetLocale)
+
+        switch directStatus {
+        case .installed:
+            // Already installed — prepare the service directly
+            await finishTranslationPreparation()
+            return
+
+        case .supported:
+            // Needs download — queue this single pair
+            pendingDownloadLegs = [(
+                source: sourceLocale,
+                target: targetLocale,
+                label: "\(settings.inputLanguage.displayName) → \(settings.captionLanguage.displayName)"
+            )]
+
+        case .unsupported:
+            // Try two-hop through English
+            guard settings.inputLanguage != .english && settings.captionLanguage != .english else {
+                showErrorMessage("Translation from \(settings.inputLanguage.displayName) to \(settings.captionLanguage.displayName) is not supported.")
+                translationStatus = ""
+                isPreparingTranslation = false
+                return
+            }
+
+            let englishLocale = Locale.Language(identifier: SupportedLanguage.english.languageCode)
+            let leg1Status = await availability.status(from: sourceLocale, to: englishLocale)
+            let leg2Status = await availability.status(from: englishLocale, to: targetLocale)
+
+            if leg1Status == .unsupported || leg2Status == .unsupported {
+                showErrorMessage("Translation from \(settings.inputLanguage.displayName) to \(settings.captionLanguage.displayName) is not supported.")
+                translationStatus = ""
+                isPreparingTranslation = false
+                return
+            }
+
+            var legs: [(source: Locale.Language, target: Locale.Language, label: String)] = []
+            if leg1Status == .supported {
+                legs.append((sourceLocale, englishLocale, "\(settings.inputLanguage.displayName) → English"))
+            }
+            if leg2Status == .supported {
+                legs.append((englishLocale, targetLocale, "English → \(settings.captionLanguage.displayName)"))
+            }
+
+            if legs.isEmpty {
+                // Both legs already installed
+                await finishTranslationPreparation()
+                return
+            }
+
+            pendingDownloadLegs = legs
+
+        @unknown default:
+            translationStatus = ""
+            isPreparingTranslation = false
+            return
+        }
+
+        // Trigger the first download
+        triggerNextDownload()
+    }
+
+    /// Sets the `translationConfig` to trigger the `.translationTask` modifier
+    /// for the next language pair that needs downloading.
+    private func triggerNextDownload() {
+        guard let next = pendingDownloadLegs.first else {
+            // All downloads complete — prepare the service
+            translationConfig = nil
+            Task { await finishTranslationPreparation() }
+            return
+        }
+
+        translationStatus = "Downloading: \(next.label)..."
+        translationConfig = .init(source: next.source, target: next.target)
+    }
+
+    /// Called from the `.translationTask` callback when Apple finishes
+    /// downloading/preparing a language pair.
+    func onTranslationDownloadComplete() {
+        translationConfig = nil
+        if !pendingDownloadLegs.isEmpty {
+            pendingDownloadLegs.removeFirst()
+        }
+        // Trigger next download on the next run loop cycle so SwiftUI
+        // processes the nil config before seeing the new one.
+        Task { @MainActor in
+            triggerNextDownload()
+        }
+    }
+
+    /// Completes translation preparation after all packs are installed.
+    private func finishTranslationPreparation() async {
         do {
             try await translationService.prepareLanguagePair(
                 from: settings.inputLanguage,
                 to: settings.captionLanguage
             )
+            translationStatus = ""
         } catch {
-            showErrorMessage("Failed to prepare translation: \(error.localizedDescription)")
+            translationStatus = ""
+            showErrorMessage("Translation setup failed: \(error.localizedDescription)")
         }
+        isPreparingTranslation = false
     }
 
     private func showErrorMessage(_ message: String) {
