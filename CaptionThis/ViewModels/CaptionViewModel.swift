@@ -6,18 +6,26 @@ import ScreenCaptureKit
 final class CaptionViewModel {
     // MARK: - Published State
 
-    var inputText: String = ""
-    var outputText: String = ""
     var isRunning: Bool = false
     var errorMessage: String = ""
     var showError: Bool = false
     var availableApps: [SCRunningApplication] = []
-    
-    // MARK: - Text Blocks for Four Panels
-    
-    var finalTranscript: String = ""
+
+    // MARK: - Segment-Based History
+
+    private(set) var segments: [TranscriptionSegment] = []
+
+    var finalTranscript: String {
+        segments.map(\.originalText).joined(separator: "\n")
+    }
+
+    var finalTranslation: String {
+        segments.compactMap(\.translatedText).joined(separator: "\n")
+    }
+
+    // MARK: - In-Progress Text
+
     var inProgressTranscript: String = ""
-    var finalTranslation: String = ""
     var inProgressTranslation: String = ""
 
     let settings = SettingsState()
@@ -41,21 +49,19 @@ final class CaptionViewModel {
     private var pipelineTask: Task<Void, Never>?
     private var translationTask: Task<Void, Never>?
     private var translationDebounceTask: Task<Void, Never>?
+    private var speechPauseTask: Task<Void, Never>?
 
-    /// Text accumulated across all pipeline sessions.
-    private var transcriptHistory: String = ""
-    /// Translation text accumulated across all pipeline sessions.
-    private var translationHistory: String = ""
-    /// Finalized input text already translated in the current session.
-    private var sessionTranslatedInput: String = ""
-    /// Accumulated translation for the current session.
-    private var sessionTranslation: String = ""
-    /// Text pending translation (for debouncing in live mode).
-    private var pendingTranslationText: String = ""
-    /// The currently active (in-progress) translation that hasn't been finalized yet.
-    private var activeTranslation: String = ""
     /// The currently active (in-progress) transcript that hasn't been finalized yet.
     private var activeTranscript: String = ""
+    /// The currently active (in-progress) translation that hasn't been finalized yet.
+    private var activeTranslation: String = ""
+    /// The exact raw `result.latestSegment` value from the last partial result.
+    /// Updated on every partial so the pause timer can snapshot it at finalization.
+    private var lastReceivedRawSegment: String = ""
+    /// Snapshot of the raw `latestSegment` at the moment the pause timer committed
+    /// text to history. Used as a stable prefix to strip from future partial results
+    /// so only genuinely new text appears in "In Progress".
+    private var committedRawPrefix: String = ""
 
     // MARK: - Init
 
@@ -99,44 +105,56 @@ final class CaptionViewModel {
 
                 for try await result in transcriptionStream {
                     guard !Task.isCancelled else { break }
-                    let sessionText = result.fullText
-                    
-                    // For the transcript, we want to show the complete sentence
-                    if result.isFinal {
-                        // Complete sentence has been finalized
-                        let newTranscript: String
-                        if !activeTranscript.isEmpty {
-                            // We have an active transcript that should be added to history
-                            newTranscript = transcriptHistory.isEmpty
-                                ? activeTranscript
-                                : transcriptHistory + "\n" + activeTranscript
-                            self.transcriptHistory = newTranscript
-                            self.finalTranscript = newTranscript
-                        } else {
-                            // No active transcript, just use the session text
-                            newTranscript = transcriptHistory.isEmpty
-                                ? sessionText
-                                : transcriptHistory + "\n" + sessionText
-                        }
-                        self.inputText = newTranscript
-                        self.inProgressTranscript = ""
-                        activeTranscript = ""
-                    } else {
-                        // Partial sentence - update the active transcript
-                        activeTranscript = sessionText
-                        // Show active transcript plus history for display
-                        let displayText = transcriptHistory.isEmpty
-                            ? activeTranscript
-                            : transcriptHistory + "\n" + activeTranscript
-                        self.inputText = displayText
-                        self.inProgressTranscript = activeTranscript
-                    }
 
-                    if self.settings.captionEnabled {
-                        if self.settings.translationMode == .live {
-                            self.debounceLiveTranslation(text: result.latestSegment)
-                        } else if result.isFinal {
-                            await self.translateNewFinalized(sessionFullText: sessionText)
+                    if result.isFinal {
+                        // Cancel pause timer — we're finalizing now
+                        speechPauseTask?.cancel()
+
+                        // Finalize any remaining in-progress text
+                        if !activeTranscript.isEmpty {
+                            await finalizeActiveTranscript()
+                        } else {
+                            // Pause timer may have already handled it; check if
+                            // latestSegment has genuinely new text after the prefix.
+                            let fullSegment = result.latestSegment
+                            let newText: String
+                            if !committedRawPrefix.isEmpty && fullSegment.hasPrefix(committedRawPrefix) {
+                                newText = String(fullSegment.dropFirst(committedRawPrefix.count))
+                                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                            } else {
+                                newText = fullSegment.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
+                            if !newText.isEmpty {
+                                let segment = TranscriptionSegment(originalText: newText)
+                                segments.append(segment)
+                                if settings.captionEnabled {
+                                    await translateSegment(at: segments.count - 1)
+                                }
+                            }
+                        }
+
+                        // Reset prefix tracking — new recognition task starts fresh
+                        committedRawPrefix = ""
+                        lastReceivedRawSegment = ""
+                    } else {
+                        // Partial: save raw segment, then strip committed prefix
+                        let fullSegment = result.latestSegment
+                        lastReceivedRawSegment = fullSegment
+
+                        if !committedRawPrefix.isEmpty && fullSegment.hasPrefix(committedRawPrefix) {
+                            activeTranscript = String(fullSegment.dropFirst(committedRawPrefix.count))
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                        } else {
+                            activeTranscript = fullSegment
+                        }
+                        inProgressTranscript = activeTranscript
+
+                        // Reset pause timer — finalize after 1s of silence
+                        resetSpeechPauseTimer()
+
+                        // Live translation of partial text
+                        if settings.captionEnabled && settings.translationMode == .live {
+                            debounceLiveTranslation(text: activeTranscript)
                         }
                     }
                 }
@@ -156,6 +174,10 @@ final class CaptionViewModel {
         translationTask = nil
         translationDebounceTask?.cancel()
         translationDebounceTask = nil
+        speechPauseTask?.cancel()
+        speechPauseTask = nil
+        committedRawPrefix = ""
+        lastReceivedRawSegment = ""
         speechService.stopRecognition()
         Task {
             await audioCapture?.stopCapture()
@@ -164,42 +186,28 @@ final class CaptionViewModel {
         isRunning = false
     }
 
-    func clearInputText() {
-        inputText = ""
-        transcriptHistory = ""
-        activeTranscript = ""
-        finalTranscript = ""
-        inProgressTranscript = ""
+    // MARK: - Clear Methods
+
+    func clearFinalTranscript() {
+        segments.removeAll()
+        committedRawPrefix = ""
+        lastReceivedRawSegment = ""
     }
 
-    func clearOutputText() {
-        outputText = ""
-        translationHistory = ""
-        sessionTranslation = ""
-        sessionTranslatedInput = ""
-        activeTranslation = ""
-        finalTranslation = ""
-        inProgressTranslation = ""
-    }
-    
-    // MARK: - New Clear Methods for Four Panels
-    
-    func clearFinalTranscript() {
-        finalTranscript = ""
-        transcriptHistory = ""
-    }
-    
     func clearInProgressTranscript() {
         inProgressTranscript = ""
+        activeTranscript = ""
     }
-    
+
     func clearFinalTranslation() {
-        finalTranslation = ""
-        translationHistory = ""
+        for i in segments.indices {
+            segments[i].translatedText = nil
+        }
     }
-    
+
     func clearInProgressTranslation() {
         inProgressTranslation = ""
+        activeTranslation = ""
     }
 
     func onInputLanguageChanged() {
@@ -222,9 +230,8 @@ final class CaptionViewModel {
         if settings.captionEnabled {
             Task { await prepareTranslation() }
         } else {
-            outputText = ""
-            finalTranslation = ""
             inProgressTranslation = ""
+            activeTranslation = ""
         }
     }
 
@@ -263,83 +270,83 @@ final class CaptionViewModel {
         await startPipeline()
     }
 
-    private func debounceLiveTranslation(text: String) {
-        pendingTranslationText = text
-        translationDebounceTask?.cancel()
-        translationDebounceTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-            await self.translateLivePartial(self.pendingTranslationText)
-        }
-    }
-
-    private func translateLivePartial(_ text: String) async {
-        guard settings.captionEnabled else { return }
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-
+    private func translateSegment(at index: Int) async {
+        guard settings.captionEnabled, index < segments.count else { return }
+        let text = segments[index].originalText
         do {
             let translated = try await translationService.translate(
                 text: text,
                 from: settings.inputLanguage,
                 to: settings.captionLanguage
             )
-            
-            // For live translation, we show this in progress but don't add to history yet
+            if index < segments.count {
+                segments[index].translatedText = translated
+            }
+        } catch {
+            if settings.translationMode == .delayed {
+                showErrorMessage("Translation failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func debounceLiveTranslation(text: String) {
+        translationDebounceTask?.cancel()
+        translationDebounceTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            await self.translateLivePartial(text)
+        }
+    }
+
+    private func translateLivePartial(_ text: String) async {
+        guard settings.captionEnabled else { return }
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        do {
+            let translated = try await translationService.translate(
+                text: text,
+                from: settings.inputLanguage,
+                to: settings.captionLanguage
+            )
             activeTranslation = translated
-            let displayText = translationHistory.isEmpty
-                ? activeTranslation
-                : translationHistory + "\n" + activeTranslation
-            self.outputText = displayText
-            self.inProgressTranslation = activeTranslation
+            inProgressTranslation = translated
         } catch {
             // Swallow live translation errors
         }
     }
 
-    private func translateNewFinalized(sessionFullText: String) async {
-        guard settings.captionEnabled else { return }
+    /// Moves the current in-progress transcript into a finalized segment.
+    /// Called when a speech pause is detected or when isFinal fires.
+    private func finalizeActiveTranscript() async {
+        let text = activeTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
 
-        // Determine the new text that hasn't been translated yet
-        let newText: String
-        if sessionTranslatedInput.isEmpty {
-            newText = sessionFullText
-        } else if sessionFullText.hasPrefix(sessionTranslatedInput) {
-            newText = String(sessionFullText.dropFirst(sessionTranslatedInput.count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        } else {
-            // Text was revised; re-translate the full session
-            newText = sessionFullText
-            sessionTranslation = ""
+        let segment = TranscriptionSegment(originalText: text)
+        segments.append(segment)
+
+        // Snapshot the exact raw latestSegment from Apple at this moment.
+        // Future partial results that start with this prefix will have it
+        // stripped so only genuinely new text appears in "In Progress".
+        committedRawPrefix = lastReceivedRawSegment
+
+        activeTranscript = ""
+        inProgressTranscript = ""
+
+        if settings.captionEnabled {
+            let segmentIndex = segments.count - 1
+            await translateSegment(at: segmentIndex)
         }
+        activeTranslation = ""
+        inProgressTranslation = ""
+    }
 
-        guard !newText.isEmpty else { return }
-
-        do {
-            let translated = try await translationService.translate(
-                text: newText,
-                from: settings.inputLanguage,
-                to: settings.captionLanguage
-            )
-            
-            if sessionTranslation.isEmpty {
-                sessionTranslation = translated
-            } else {
-                sessionTranslation += "\n" + translated
-            }
-            
-            // Update final translation with accumulated history
-            let newTranslation = translationHistory.isEmpty
-                ? sessionTranslation
-                : translationHistory + "\n" + sessionTranslation
-            self.outputText = newTranslation
-            self.translationHistory = newTranslation
-            self.finalTranslation = newTranslation
-            
-            sessionTranslatedInput = sessionFullText
-        } catch {
-            if settings.translationMode == .delayed {
-                showErrorMessage("Translation failed: \(error.localizedDescription)")
-            }
+    /// Resets the speech pause timer. When no new partial results arrive
+    /// for 1 second, the current active transcript is finalized into a segment.
+    private func resetSpeechPauseTimer() {
+        speechPauseTask?.cancel()
+        speechPauseTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1000))
+            guard !Task.isCancelled else { return }
+            await finalizeActiveTranscript()
         }
     }
 

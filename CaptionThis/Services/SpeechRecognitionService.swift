@@ -96,6 +96,7 @@ final class SpeechRecognitionService {
 
                 if result.isFinal {
                     self.cumulativeText = combinedText
+                    self.lastSegmentText = ""  // prevent double-counting on error code 1
                 }
             }
 
@@ -104,11 +105,19 @@ final class SpeechRecognitionService {
                 // Error code 1 = recognition task limit reached or cancelled; auto-restart
                 // Error code 216 = request was cancelled
                 if nsError.domain == "kAFAssistantErrorDomain" && nsError.code == 1 {
-                    // Accumulate text from the last segment before restarting
+                    // Emit synthetic final for text accumulated in this task
                     if !self.lastSegmentText.isEmpty {
-                        self.cumulativeText = self.cumulativeText.isEmpty
+                        let combinedText = self.cumulativeText.isEmpty
                             ? self.lastSegmentText
                             : self.cumulativeText + " " + self.lastSegmentText
+                        let syntheticResult = TranscriptionResult(
+                            fullText: combinedText,
+                            latestSegment: self.lastSegmentText,
+                            finalizedText: combinedText,
+                            isFinal: true
+                        )
+                        self.continuation?.yield(syntheticResult)
+                        self.cumulativeText = combinedText
                     }
                     self.lastSegmentText = ""
                     self.cancelCurrentTask()

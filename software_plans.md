@@ -62,9 +62,9 @@ Japanes -> English | Source: Safari | Live translation (off) | Start | Pinned
 
 
 
-The transcript and translation panels are simply a rolling text that is appended with either transcript or translation. It is read-only but selectable, so the user can copy and paste to another app.
+The transcript and translation panels are simply two panels (history and active) of rolling text that is appended with either transcript or translation. It is read-only but selectable, so the user can copy and paste to another app.
 
-Each panel has also the option to be cleared, which requires confirming a dialog to avoid wrongly pressed buttons.
+Each panel group has also the option to be cleared, which requires confirming a dialog to avoid wrongly pressed buttons.
 
 
 Error Handling and Permissions:

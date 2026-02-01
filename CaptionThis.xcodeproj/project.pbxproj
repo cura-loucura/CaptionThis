@@ -16,6 +16,7 @@
 		A50908BD5A7C9AE31CDE3FF2 /* TranscriptionPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0161055F77A1028EA9CC36B /* TranscriptionPanelView.swift */; };
 		B1FAB5041347668132844826 /* MicrophoneCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1047FBDBD63268311E2C511 /* MicrophoneCapture.swift */; };
 		BC487BB3B0A46DE9A65F50A9 /* TranscriptionResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC59B2B4BFC73BA7B9D090B /* TranscriptionResult.swift */; };
+		AB12CD34EF56789012345678 /* TranscriptionSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB12CD34EF56789012345679 /* TranscriptionSegment.swift */; };
 		C3B63E488C384A9DD7E55FAB /* CaptionThisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B7518D3A24E90780138907 /* CaptionThisApp.swift */; };
 		C7BBBA93DDCABD1F1E7CB2CA /* AudioSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79F06499411C5934A4811CD9 /* AudioSource.swift */; };
 		CE334FE2599C161B2891C45C /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A1F9EDD209366E2198D3BC /* PermissionService.swift */; };
@@ -35,6 +36,7 @@
 		42787BF446C574A65FBB1F1B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		49A1F9EDD209366E2198D3BC /* PermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionService.swift; sourceTree = "<group>"; };
 		4BC59B2B4BFC73BA7B9D090B /* TranscriptionResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionResult.swift; sourceTree = "<group>"; };
+		AB12CD34EF56789012345679 /* TranscriptionSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSegment.swift; sourceTree = "<group>"; };
 		73368D00FD2D29ECAF3D17D0 /* CaptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionViewModel.swift; sourceTree = "<group>"; };
 		79F06499411C5934A4811CD9 /* AudioSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSource.swift; sourceTree = "<group>"; };
 		9828E329CA4254E4DDB22D66 /* SettingsState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsState.swift; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 				79F06499411C5934A4811CD9 /* AudioSource.swift */,
 				E4F9543057897363F3E80993 /* SupportedLanguage.swift */,
 				4BC59B2B4BFC73BA7B9D090B /* TranscriptionResult.swift */,
+				AB12CD34EF56789012345679 /* TranscriptionSegment.swift */,
 				0EED6210907E620F83936718 /* TranslationMode.swift */,
 			);
 			path = Models;
@@ -197,6 +200,7 @@
 				0C466901B730899D8663EB92 /* SupportedLanguage.swift in Sources */,
 				A50908BD5A7C9AE31CDE3FF2 /* TranscriptionPanelView.swift in Sources */,
 				BC487BB3B0A46DE9A65F50A9 /* TranscriptionResult.swift in Sources */,
+				AB12CD34EF56789012345678 /* TranscriptionSegment.swift in Sources */,
 				FF9621A2D3182953E977673D /* TranslationMode.swift in Sources */,
 				DC5727260B0E53118B3A029B /* TranslationService.swift in Sources */,
 			);
