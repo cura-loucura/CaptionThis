@@ -80,7 +80,7 @@ struct HeaderView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 150)
+                    .frame(width: 200)
                 }
 
                 Spacer()

@@ -12,6 +12,13 @@ final class CaptionViewModel {
     var errorMessage: String = ""
     var showError: Bool = false
     var availableApps: [SCRunningApplication] = []
+    
+    // MARK: - Text Blocks for Four Panels
+    
+    var finalTranscript: String = ""
+    var inProgressTranscript: String = ""
+    var finalTranslation: String = ""
+    var inProgressTranslation: String = ""
 
     let settings = SettingsState()
 
@@ -35,17 +42,20 @@ final class CaptionViewModel {
     private var translationTask: Task<Void, Never>?
     private var translationDebounceTask: Task<Void, Never>?
 
-    /// Text pending translation (for debouncing in live mode).
-    private var pendingTranslationText: String = ""
-
-    /// Transcript text preserved across pipeline restarts.
+    /// Text accumulated across all pipeline sessions.
     private var transcriptHistory: String = ""
-    /// Translation text preserved across pipeline restarts.
+    /// Translation text accumulated across all pipeline sessions.
     private var translationHistory: String = ""
     /// Finalized input text already translated in the current session.
     private var sessionTranslatedInput: String = ""
     /// Accumulated translation for the current session.
     private var sessionTranslation: String = ""
+    /// Text pending translation (for debouncing in live mode).
+    private var pendingTranslationText: String = ""
+    /// The currently active (in-progress) translation that hasn't been finalized yet.
+    private var activeTranslation: String = ""
+    /// The currently active (in-progress) transcript that hasn't been finalized yet.
+    private var activeTranscript: String = ""
 
     // MARK: - Init
 
@@ -90,9 +100,37 @@ final class CaptionViewModel {
                 for try await result in transcriptionStream {
                     guard !Task.isCancelled else { break }
                     let sessionText = result.fullText
-                    self.inputText = self.transcriptHistory.isEmpty
-                        ? sessionText
-                        : self.transcriptHistory + " " + sessionText
+                    
+                    // For the transcript, we want to show the complete sentence
+                    if result.isFinal {
+                        // Complete sentence has been finalized
+                        let newTranscript: String
+                        if !activeTranscript.isEmpty {
+                            // We have an active transcript that should be added to history
+                            newTranscript = transcriptHistory.isEmpty
+                                ? activeTranscript
+                                : transcriptHistory + "\n" + activeTranscript
+                            self.transcriptHistory = newTranscript
+                            self.finalTranscript = newTranscript
+                        } else {
+                            // No active transcript, just use the session text
+                            newTranscript = transcriptHistory.isEmpty
+                                ? sessionText
+                                : transcriptHistory + "\n" + sessionText
+                        }
+                        self.inputText = newTranscript
+                        self.inProgressTranscript = ""
+                        activeTranscript = ""
+                    } else {
+                        // Partial sentence - update the active transcript
+                        activeTranscript = sessionText
+                        // Show active transcript plus history for display
+                        let displayText = transcriptHistory.isEmpty
+                            ? activeTranscript
+                            : transcriptHistory + "\n" + activeTranscript
+                        self.inputText = displayText
+                        self.inProgressTranscript = activeTranscript
+                    }
 
                     if self.settings.captionEnabled {
                         if self.settings.translationMode == .live {
@@ -112,7 +150,6 @@ final class CaptionViewModel {
     }
 
     func stopPipeline() {
-        preserveHistory()
         pipelineTask?.cancel()
         pipelineTask = nil
         translationTask?.cancel()
@@ -130,6 +167,9 @@ final class CaptionViewModel {
     func clearInputText() {
         inputText = ""
         transcriptHistory = ""
+        activeTranscript = ""
+        finalTranscript = ""
+        inProgressTranscript = ""
     }
 
     func clearOutputText() {
@@ -137,6 +177,29 @@ final class CaptionViewModel {
         translationHistory = ""
         sessionTranslation = ""
         sessionTranslatedInput = ""
+        activeTranslation = ""
+        finalTranslation = ""
+        inProgressTranslation = ""
+    }
+    
+    // MARK: - New Clear Methods for Four Panels
+    
+    func clearFinalTranscript() {
+        finalTranscript = ""
+        transcriptHistory = ""
+    }
+    
+    func clearInProgressTranscript() {
+        inProgressTranscript = ""
+    }
+    
+    func clearFinalTranslation() {
+        finalTranslation = ""
+        translationHistory = ""
+    }
+    
+    func clearInProgressTranslation() {
+        inProgressTranslation = ""
     }
 
     func onInputLanguageChanged() {
@@ -160,6 +223,8 @@ final class CaptionViewModel {
             Task { await prepareTranslation() }
         } else {
             outputText = ""
+            finalTranslation = ""
+            inProgressTranslation = ""
         }
     }
 
@@ -198,13 +263,6 @@ final class CaptionViewModel {
         await startPipeline()
     }
 
-    private func preserveHistory() {
-        transcriptHistory = inputText
-        translationHistory = outputText
-        sessionTranslatedInput = ""
-        sessionTranslation = ""
-    }
-
     private func debounceLiveTranslation(text: String) {
         pendingTranslationText = text
         translationDebounceTask?.cancel()
@@ -225,10 +283,14 @@ final class CaptionViewModel {
                 from: settings.inputLanguage,
                 to: settings.captionLanguage
             )
-            let base = translationHistory.isEmpty
-                ? sessionTranslation
-                : translationHistory + " " + sessionTranslation
-            self.outputText = base.isEmpty ? translated : base + " " + translated
+            
+            // For live translation, we show this in progress but don't add to history yet
+            activeTranslation = translated
+            let displayText = translationHistory.isEmpty
+                ? activeTranslation
+                : translationHistory + "\n" + activeTranslation
+            self.outputText = displayText
+            self.inProgressTranslation = activeTranslation
         } catch {
             // Swallow live translation errors
         }
@@ -258,14 +320,21 @@ final class CaptionViewModel {
                 from: settings.inputLanguage,
                 to: settings.captionLanguage
             )
+            
             if sessionTranslation.isEmpty {
                 sessionTranslation = translated
             } else {
-                sessionTranslation += " " + translated
+                sessionTranslation += "\n" + translated
             }
-            self.outputText = translationHistory.isEmpty
+            
+            // Update final translation with accumulated history
+            let newTranslation = translationHistory.isEmpty
                 ? sessionTranslation
-                : translationHistory + " " + sessionTranslation
+                : translationHistory + "\n" + sessionTranslation
+            self.outputText = newTranslation
+            self.translationHistory = newTranslation
+            self.finalTranslation = newTranslation
+            
             sessionTranslatedInput = sessionFullText
         } catch {
             if settings.translationMode == .delayed {
