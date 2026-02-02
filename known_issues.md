@@ -8,9 +8,4 @@ The delayed translation mode currently relies on SFSpeechRecognizer's isFinal se
 
 3. Download of language packs not clear when available
 
-
-4. CaptureThis records the whole screen and not only the selected window
-
-5. If the user makes multiple recordings in the same session, the timestamp of the transcript and translation are not continuous
-
-6. On ScreenRecordingService.swift there is a switch type for .screen and .audio but none for .microphone. We need to figure out the best way to deal with that case.
+4. If the user makes multiple recordings in the same session, the timestamp of the transcript and translation may not be continuous
