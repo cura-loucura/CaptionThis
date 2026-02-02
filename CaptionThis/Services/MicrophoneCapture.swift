@@ -27,9 +27,9 @@ final class MicrophoneCapture: AudioCaptureService, @unchecked Sendable {
         }
 
         let stream = AsyncThrowingStream<AVAudioPCMBuffer, Error> { continuation in
-            self.lock.lock()
-            self.continuation = continuation
-            self.lock.unlock()
+            self.lock.withLock {
+                self.continuation = continuation
+            }
 
             continuation.onTermination = { @Sendable _ in
                 self.stopCaptureSync()
@@ -52,10 +52,11 @@ final class MicrophoneCapture: AudioCaptureService, @unchecked Sendable {
     }
 
     private func stopCaptureSync() {
-        lock.lock()
-        let cont = continuation
-        continuation = nil
-        lock.unlock()
+        let cont = lock.withLock {
+            let c = continuation
+            continuation = nil
+            return c
+        }
 
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()

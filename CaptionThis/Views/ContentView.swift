@@ -15,26 +15,26 @@ struct ContentView: View {
             // Panels
             VStack(spacing: 12) {
                 TranscriptionPanelView(
-                    title: "Transcript 1 (Final)",
+                    title: "Transcript",
                     text: viewModel.finalTranscript,
                     onClear: { viewModel.clearFinalTranscript() }
                 )
 
                 TranscriptionPanelView(
-                    title: "Transcript 2 (In Progress)",
+                    title: "Transcript (In Progress)",
                     text: viewModel.inProgressTranscript,
                     onClear: { viewModel.clearInProgressTranscript() }
                 )
 
                 if viewModel.settings.captionEnabled {
                     TranscriptionPanelView(
-                        title: "Translation 1 (Final)",
+                        title: "Translation",
                         text: viewModel.finalTranslation,
                         onClear: { viewModel.clearFinalTranslation() }
                     )
 
                     TranscriptionPanelView(
-                        title: "Translation 2 (In Progress)",
+                        title: "Translation (In Progress)",
                         text: viewModel.inProgressTranslation,
                         onClear: { viewModel.clearInProgressTranslation() }
                     )

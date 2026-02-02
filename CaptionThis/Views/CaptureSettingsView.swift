@@ -53,7 +53,7 @@ struct CaptureSettingsView: View {
                                 .foregroundStyle(.secondary)
                             Text("Custom location. ")
                                 .foregroundStyle(.secondary)
-                            + Text("Reset to default (~/Movies/CaptionThis)")
+                            Text("Reset to default (~/Movies/CaptionThis)")
                                 .foregroundStyle(.blue)
                             Spacer()
                         }

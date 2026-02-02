@@ -6,6 +6,7 @@ final class SpeechRecognitionService {
     private var recognizer: SFSpeechRecognizer?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
+    private var audioFeedTask: Task<Void, Never>?
     private var continuation: AsyncThrowingStream<TranscriptionResult, Error>.Continuation?
 
     /// Text accumulated from previous recognition tasks (before auto-restarts).
@@ -45,14 +46,20 @@ final class SpeechRecognitionService {
             }
         }
 
-        Task { @MainActor in
-            await startRecognitionTask(audioStream: audioStream)
-        }
+        // Start a single audio-feed task for the entire recognition session.
+        // This task survives individual recognition task restarts — it keeps
+        // feeding buffers to whatever the current recognitionRequest is.
+        startAudioFeedTask(audioStream: audioStream)
+
+        // Start the first recognition task
+        startRecognitionTask()
 
         return stream
     }
 
     func stopRecognition() {
+        audioFeedTask?.cancel()
+        audioFeedTask = nil
         cancelCurrentTask()
         let cont = continuation
         continuation = nil
@@ -61,77 +68,11 @@ final class SpeechRecognitionService {
 
     // MARK: - Private
 
-    private func startRecognitionTask(
-        audioStream: AsyncThrowingStream<AVAudioPCMBuffer, Error>
-    ) async {
-        guard let recognizer, recognizer.isAvailable else {
-            continuation?.finish(throwing: RecognitionError.recognizerUnavailable)
-            return
-        }
-
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = true
-        request.addsPunctuation = true
-        self.recognitionRequest = request
-
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard let self else { return }
-
-            if let result {
-                let fullTranscription = result.bestTranscription.formattedString
-                self.lastSegmentText = fullTranscription
-                let combinedText = self.cumulativeText.isEmpty
-                    ? fullTranscription
-                    : self.cumulativeText + " " + fullTranscription
-
-                let transcriptionResult = TranscriptionResult(
-                    fullText: combinedText,
-                    latestSegment: fullTranscription,
-                    finalizedText: result.isFinal ? combinedText : self.cumulativeText,
-                    isFinal: result.isFinal
-                )
-
-                self.continuation?.yield(transcriptionResult)
-
-                if result.isFinal {
-                    self.cumulativeText = combinedText
-                    self.lastSegmentText = ""  // prevent double-counting on error code 1
-                }
-            }
-
-            if let error {
-                let nsError = error as NSError
-                // Error code 1 = recognition task limit reached or cancelled; auto-restart
-                // Error code 216 = request was cancelled
-                if nsError.domain == "kAFAssistantErrorDomain" && nsError.code == 1 {
-                    // Emit synthetic final for text accumulated in this task
-                    if !self.lastSegmentText.isEmpty {
-                        let combinedText = self.cumulativeText.isEmpty
-                            ? self.lastSegmentText
-                            : self.cumulativeText + " " + self.lastSegmentText
-                        let syntheticResult = TranscriptionResult(
-                            fullText: combinedText,
-                            latestSegment: self.lastSegmentText,
-                            finalizedText: combinedText,
-                            isFinal: true
-                        )
-                        self.continuation?.yield(syntheticResult)
-                        self.cumulativeText = combinedText
-                    }
-                    self.lastSegmentText = ""
-                    self.cancelCurrentTask()
-                    Task { @MainActor in
-                        await self.startRecognitionTask(audioStream: audioStream)
-                    }
-                } else if nsError.code != 216 {
-                    self.continuation?.finish(throwing: error)
-                }
-            }
-        }
-
-        // Feed audio buffers to the recognition request
-        Task {
+    /// Feeds audio buffers from the capture stream to the current recognition request.
+    /// Runs for the entire recognition session and survives individual recognition
+    /// task restarts (which happen when Apple's recognition limit is reached).
+    private func startAudioFeedTask(audioStream: AsyncThrowingStream<AVAudioPCMBuffer, Error>) {
+        audioFeedTask = Task {
             do {
                 for try await buffer in audioStream {
                     await MainActor.run {
@@ -144,6 +85,77 @@ final class SpeechRecognitionService {
             } catch {
                 await MainActor.run {
                     self.recognitionRequest?.endAudio()
+                }
+            }
+        }
+    }
+
+    /// Creates a new recognition request and task. Called on initial start
+    /// and on each auto-restart when the recognition limit is reached.
+    private func startRecognitionTask() {
+        guard let recognizer, recognizer.isAvailable else {
+            continuation?.finish(throwing: RecognitionError.recognizerUnavailable)
+            return
+        }
+
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.requiresOnDeviceRecognition = true
+        request.addsPunctuation = true
+        self.recognitionRequest = request
+
+        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            // Dispatch to MainActor to safely access @MainActor-isolated state.
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+
+                if let result {
+                    let fullTranscription = result.bestTranscription.formattedString
+                    self.lastSegmentText = fullTranscription
+                    let combinedText = self.cumulativeText.isEmpty
+                        ? fullTranscription
+                        : self.cumulativeText + " " + fullTranscription
+
+                    let transcriptionResult = TranscriptionResult(
+                        fullText: combinedText,
+                        latestSegment: fullTranscription,
+                        finalizedText: result.isFinal ? combinedText : self.cumulativeText,
+                        isFinal: result.isFinal
+                    )
+
+                    self.continuation?.yield(transcriptionResult)
+
+                    if result.isFinal {
+                        self.cumulativeText = combinedText
+                        self.lastSegmentText = ""  // prevent double-counting on error code 1
+                    }
+                }
+
+                if let error {
+                    let nsError = error as NSError
+                    // Error code 1 = recognition task limit reached or cancelled; auto-restart
+                    // Error code 216 = request was cancelled
+                    if nsError.domain == "kAFAssistantErrorDomain" && nsError.code == 1 {
+                        // Emit synthetic final for text accumulated in this task
+                        if !self.lastSegmentText.isEmpty {
+                            let combinedText = self.cumulativeText.isEmpty
+                                ? self.lastSegmentText
+                                : self.cumulativeText + " " + self.lastSegmentText
+                            let syntheticResult = TranscriptionResult(
+                                fullText: combinedText,
+                                latestSegment: self.lastSegmentText,
+                                finalizedText: combinedText,
+                                isFinal: true
+                            )
+                            self.continuation?.yield(syntheticResult)
+                            self.cumulativeText = combinedText
+                        }
+                        self.lastSegmentText = ""
+                        self.cancelCurrentTask()
+                        self.startRecognitionTask()
+                    } else if nsError.code != 216 {
+                        self.continuation?.finish(throwing: error)
+                    }
                 }
             }
         }

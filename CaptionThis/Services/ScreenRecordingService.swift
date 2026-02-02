@@ -95,19 +95,17 @@ final class SegmentRecorder: NSObject, @unchecked Sendable {
 
     /// Sets `isWriting` under the lock (safe to call from async contexts).
     private func setWriting(_ value: Bool) {
-        lock.lock()
-        isWriting = value
-        lock.unlock()
+        lock.withLock { isWriting = value }
     }
 
     /// Atomically sets `isWriting = false` and takes ownership of the stream reference.
     private func stopWritingAndTakeStream() -> SCStream? {
-        lock.lock()
-        isWriting = false
-        let scStream = stream
-        stream = nil
-        lock.unlock()
-        return scStream
+        lock.withLock {
+            isWriting = false
+            let scStream = stream
+            stream = nil
+            return scStream
+        }
     }
 
     init(settings: CaptureSettings, segmentIndex: Int) {
@@ -257,12 +255,7 @@ extension SegmentRecorder: SCStreamOutput {
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of type: SCStreamOutputType
     ) {
-        lock.lock()
-        guard isWriting else {
-            lock.unlock()
-            return
-        }
-        lock.unlock()
+        guard lock.withLock({ isWriting }) else { return }
 
         guard let writer = assetWriter, writer.status == .writing else { return }
 
@@ -298,8 +291,6 @@ extension SegmentRecorder: SCStreamOutput {
 
 extension SegmentRecorder: SCStreamDelegate {
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        lock.lock()
-        isWriting = false
-        lock.unlock()
+        lock.withLock { isWriting = false }
     }
 }

@@ -48,9 +48,9 @@ final class AppAudioCapture: NSObject, AudioCaptureService, @unchecked Sendable 
         let scStream = SCStream(filter: filter, configuration: config, delegate: self)
 
         let asyncStream = AsyncThrowingStream<AVAudioPCMBuffer, Error> { continuation in
-            self.lock.lock()
-            self.continuation = continuation
-            self.lock.unlock()
+            self.lock.withLock {
+                self.continuation = continuation
+            }
 
             continuation.onTermination = { @Sendable _ in
                 Task { await self.stopCapture() }
@@ -65,12 +65,13 @@ final class AppAudioCapture: NSObject, AudioCaptureService, @unchecked Sendable 
     }
 
     func stopCapture() async {
-        lock.lock()
-        let cont = continuation
-        continuation = nil
-        let scStream = stream
-        stream = nil
-        lock.unlock()
+        let (cont, scStream) = lock.withLock {
+            let c = continuation
+            let s = stream
+            continuation = nil
+            stream = nil
+            return (c, s)
+        }
 
         if let scStream {
             try? await scStream.stopCapture()
@@ -124,9 +125,7 @@ extension AppAudioCapture: SCStreamOutput {
         guard type == .audio else { return }
         guard let pcmBuffer = convertCMSampleBufferToAVAudioPCMBuffer(sampleBuffer) else { return }
 
-        lock.lock()
-        let cont = continuation
-        lock.unlock()
+        let cont = lock.withLock { continuation }
 
         cont?.yield(pcmBuffer)
     }
@@ -134,10 +133,11 @@ extension AppAudioCapture: SCStreamOutput {
 
 extension AppAudioCapture: SCStreamDelegate {
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        lock.lock()
-        let cont = continuation
-        continuation = nil
-        lock.unlock()
+        let cont = lock.withLock {
+            let c = continuation
+            continuation = nil
+            return c
+        }
 
         cont?.finish(throwing: error)
     }
