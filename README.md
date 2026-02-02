@@ -1,6 +1,6 @@
 # CaptionThis
 
-Real-time speech transcription and translation for macOS. CaptionThis captures audio from your microphone or any running application and provides live captions with optional translation — all processed on-device for privacy.
+Real-time speech transcription and translation for macOS. CaptionThis captures audio from your microphone or any running application and provides live captions with optional translation — all processed on-device for privacy. It also has an option to record the screen while translating (CaptureThis), generating video, transcript and translation files.
 
 This software was inspired by [Subtitle ME](https://serpentisei.gumroad.com/l/subtitleme) and [Transcrybe](https://apps.apple.com/de/app/transcrybe-live-translation/id6670778781?l=en-GB&mt=12)
 
