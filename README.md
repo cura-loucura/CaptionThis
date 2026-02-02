@@ -16,7 +16,7 @@ This software was inspired by [Subtitle ME](https://serpentisei.gumroad.com/l/su
 - **Auto-stop timer** — Set a duration in minutes and the recording stops automatically when time is up, with a live countdown displayed in the header
 - **Transcription and translation files** — When CaptureThis is enabled, transcriptions and translations are saved to timestamped text files alongside the video
 - **Four-panel display** — Separate panels for finalized transcript, in-progress transcript, finalized translation, and in-progress translation
-- **Supported languages** — English, French, Japanese, and Portuguese (Brazilian)
+- **Supported languages** — English, French, Japanese, and Portuguese (Brazilian) (More languages can be supported by enabling them in the code)
 - **Two-hop translation** — When a direct language pair is unavailable, translates through English as an intermediate step
 - **Pin on top** — Keep the window floating above other windows
 - **Fully on-device** — All speech recognition and translation happens locally, no data is sent to external servers
