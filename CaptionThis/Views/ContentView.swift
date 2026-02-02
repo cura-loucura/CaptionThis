@@ -74,6 +74,14 @@ struct ContentView: View {
                 onCancel: { viewModel.cancelCaptureCompletion() }
             )
         }
+        .translationTask(viewModel.translationConfig) { session in
+            do {
+                try await session.prepareTranslation()
+                viewModel.onTranslationDownloadComplete()
+            } catch {
+                viewModel.onTranslationDownloadFailed(error)
+            }
+        }
         .background(WindowAccessor(isPinned: viewModel.settings.isPinned))
         .onChange(of: viewModel.settings.isPinned) { _, isPinned in
             setWindowLevel(isPinned ? .floating : .normal)

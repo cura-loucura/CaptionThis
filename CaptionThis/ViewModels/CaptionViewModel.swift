@@ -530,6 +530,15 @@ final class CaptionViewModel {
         }
     }
 
+    /// Called from the `.translationTask` callback when a download fails.
+    func onTranslationDownloadFailed(_ error: Error) {
+        translationConfig = nil
+        pendingDownloadLegs.removeAll()
+        isPreparingTranslation = false
+        translationStatus = ""
+        showErrorMessage("Translation download failed: \(error.localizedDescription)")
+    }
+
     /// Completes translation preparation after all packs are installed.
     private func finishTranslationPreparation() async {
         do {
