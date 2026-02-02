@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F2E1D0C9B8A7F6E5D4C3B2A1 /* Assets.xcassets */; };
 		0C466901B730899D8663EB92 /* SupportedLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F9543057897363F3E80993 /* SupportedLanguage.swift */; };
 		2664EFD2AB8B17B059C786CD /* VideoProcessingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B784A8E73C5152092FE65533 /* VideoProcessingService.swift */; };
 		60D57E376DDD4E207D7F45B0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A26553DFC6FD40C03528FBC /* ContentView.swift */; };
@@ -19,6 +18,7 @@
 		956E3F79AA400BE88B766EE2 /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD4C107D96B2969021175166 /* HeaderView.swift */; };
 		969CA2083B28E49F2358FBD6 /* AudioSourcePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 022B4138D6CD319E58B56A86 /* AudioSourcePicker.swift */; };
 		9A4889EBC7D818E823742A37 /* CaptureSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C6A3372B7323895A02985B /* CaptureSettings.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F2E1D0C9B8A7F6E5D4C3B2A1 /* Assets.xcassets */; };
 		A50908BD5A7C9AE31CDE3FF2 /* TranscriptionPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0161055F77A1028EA9CC36B /* TranscriptionPanelView.swift */; };
 		B1FAB5041347668132844826 /* MicrophoneCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1047FBDBD63268311E2C511 /* MicrophoneCapture.swift */; };
 		BC487BB3B0A46DE9A65F50A9 /* TranscriptionResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC59B2B4BFC73BA7B9D090B /* TranscriptionResult.swift */; };
@@ -35,7 +35,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		F2E1D0C9B8A7F6E5D4C3B2A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		022B4138D6CD319E58B56A86 /* AudioSourcePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSourcePicker.swift; sourceTree = "<group>"; };
 		0EED6210907E620F83936718 /* TranslationMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationMode.swift; sourceTree = "<group>"; };
 		19B7518D3A24E90780138907 /* CaptionThisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionThisApp.swift; sourceTree = "<group>"; };
@@ -60,6 +59,7 @@
 		E5C03B49413F77EEF2052E8A /* AppAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAudioCapture.swift; sourceTree = "<group>"; };
 		E8EDACEFECD061008462B89B /* CaptionThis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CaptionThis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1047FBDBD63268311E2C511 /* MicrophoneCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneCapture.swift; sourceTree = "<group>"; };
+		F2E1D0C9B8A7F6E5D4C3B2A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F71EA3DFACDEDB41A4A5B10B /* SpeechRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionService.swift; sourceTree = "<group>"; };
 		FB237A84C89C4DA58D670357 /* AudioCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureService.swift; sourceTree = "<group>"; };
 		FD4C107D96B2969021175166 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
@@ -177,11 +177,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-					8C73F21485F1E3F5B8041CC7 = {
-						ProvisioningStyle = Automatic;
-					};
-				};
 			};
 			buildConfigurationList = 08B6C2757E4234E01846B9F3 /* Build configuration list for PBXProject "CaptionThis" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -252,15 +247,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = CaptionThis/CaptionThis.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7387Q28AG9;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CaptionThis/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CaptionThis;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -268,8 +272,15 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.captionthis.CaptionThis;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SDKROOT = macosx;
-				SWIFT_VERSION = 5.10;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -334,15 +345,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = CaptionThis/CaptionThis.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7387Q28AG9;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CaptionThis/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = CaptionThis;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -350,8 +370,15 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.captionthis.CaptionThis;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SDKROOT = macosx;
-				SWIFT_VERSION = 5.10;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
