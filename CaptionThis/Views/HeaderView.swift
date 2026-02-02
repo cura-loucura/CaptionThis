@@ -82,25 +82,38 @@ struct HeaderView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 200)
+                    .frame(width: 150)
                 }
-                // Capture minutes input - next to translation mode
+                // Capture minutes input / countdown display
                 if viewModel.settings.captionEnabled {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Minutes")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        TextField("Minutes", value: $settings.captureMinutes, format: .number)
-                            .frame(width: 60)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: settings.captureMinutes) { oldValue, newValue in
-                                // Ensure value stays within valid range 0-99
-                                if newValue < 0 {
-                                    settings.captureMinutes = 0
-                                } else if newValue > 99 {
-                                    settings.captureMinutes = 99
-                                }
+                        if viewModel.isCapturing {
+                            if viewModel.isCountdownActive {
+                                Text(viewModel.countdownDisplay)
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundStyle(viewModel.countdownSecondsRemaining < 60 ? .red : .orange)
+                                    .frame(width: 60, alignment: .center)
+                            } else {
+                                TextField("Minutes", value: $settings.captureMinutes, format: .number)
+                                    .frame(width: 60)
+                                    .textFieldStyle(.roundedBorder)
+                                    .disabled(true)
                             }
+                        } else {
+                            TextField("Minutes", value: $settings.captureMinutes, format: .number)
+                                .frame(width: 60)
+                                .textFieldStyle(.roundedBorder)
+                                .onChange(of: settings.captureMinutes) { oldValue, newValue in
+                                    if newValue < 0 {
+                                        settings.captureMinutes = 0
+                                    } else if newValue > 99 {
+                                        settings.captureMinutes = 99
+                                    }
+                                }
+                        }
                     }
                 }
 

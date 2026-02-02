@@ -75,6 +75,21 @@ final class CaptionViewModel {
     private var translationTask: Task<Void, Never>?
     private var translationDebounceTask: Task<Void, Never>?
     private var speechPauseTask: Task<Void, Never>?
+    private var countdownTask: Task<Void, Never>?
+
+    // MARK: - Countdown Timer State
+
+    var countdownSecondsRemaining: Int = 0
+
+    var isCountdownActive: Bool {
+        countdownSecondsRemaining > 0 && isCapturing
+    }
+
+    var countdownDisplay: String {
+        let minutes = countdownSecondsRemaining / 60
+        let seconds = countdownSecondsRemaining % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
 
     /// The currently active (in-progress) transcript that hasn't been finalized yet.
     private var activeTranscript: String = ""
@@ -200,6 +215,7 @@ final class CaptionViewModel {
     }
 
     func stopPipeline() {
+        cancelCountdownTimer()
         pipelineTask?.cancel()
         pipelineTask = nil
         translationTask?.cancel()
@@ -535,9 +551,38 @@ final class CaptionViewModel {
     }
 
     func cleanup() {
+        cancelCountdownTimer()
         stopPipeline()
         closeCaptureFiles()
         Task { await screenRecordingService.stop() }
+    }
+
+    // MARK: - Countdown Timer
+
+    private func startCountdownTimer() {
+        guard settings.captureMinutes > 0 else { return }
+        countdownSecondsRemaining = settings.captureMinutes * 60
+        countdownTask = Task { @MainActor in
+            while !Task.isCancelled && countdownSecondsRemaining > 0 {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { break }
+                countdownSecondsRemaining -= 1
+                if countdownSecondsRemaining <= 0 {
+                    countdownSecondsRemaining = 0
+                    // Spawn an independent task so cancelCountdownTimer()
+                    // inside completeCaptureAndStop() doesn't cancel the
+                    // video processing work.
+                    Task { [weak self] in await self?.completeCaptureAndStop() }
+                    return
+                }
+            }
+        }
+    }
+
+    private func cancelCountdownTimer() {
+        countdownTask?.cancel()
+        countdownTask = nil
+        countdownSecondsRemaining = 0
     }
 
     // MARK: - Capture Lifecycle
@@ -562,6 +607,7 @@ final class CaptionViewModel {
 
         do {
             try await screenRecordingService.start(settings: settings.captureSettings)
+            startCountdownTimer()
         } catch {
             showErrorMessage("Screen recording failed: \(error.localizedDescription)")
         }
@@ -569,6 +615,7 @@ final class CaptionViewModel {
 
     /// Completes the capture session: stops everything, closes files, merges video, disables CaptureThis.
     func completeCaptureAndStop() async {
+        cancelCountdownTimer()
         showCaptureCompletion = false
         stopPipeline()
 
@@ -592,6 +639,7 @@ final class CaptionViewModel {
     /// Pauses the capture: stops transcription pipeline and pauses recording.
     /// Text files stay open. Next start creates a new numbered video segment.
     func pauseCaptureAndStop() async {
+        cancelCountdownTimer()
         showCaptureCompletion = false
         stopPipeline()
         await screenRecordingService.pause()
