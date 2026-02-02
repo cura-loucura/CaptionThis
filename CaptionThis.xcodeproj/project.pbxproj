@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F2E1D0C9B8A7F6E5D4C3B2A1 /* Assets.xcassets */; };
 		0C466901B730899D8663EB92 /* SupportedLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F9543057897363F3E80993 /* SupportedLanguage.swift */; };
 		2664EFD2AB8B17B059C786CD /* VideoProcessingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B784A8E73C5152092FE65533 /* VideoProcessingService.swift */; };
 		60D57E376DDD4E207D7F45B0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A26553DFC6FD40C03528FBC /* ContentView.swift */; };
@@ -34,6 +35,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F2E1D0C9B8A7F6E5D4C3B2A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		022B4138D6CD319E58B56A86 /* AudioSourcePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSourcePicker.swift; sourceTree = "<group>"; };
 		0EED6210907E620F83936718 /* TranslationMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationMode.swift; sourceTree = "<group>"; };
 		19B7518D3A24E90780138907 /* CaptionThisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionThisApp.swift; sourceTree = "<group>"; };
@@ -83,6 +85,7 @@
 		53390C435933E53C8ADAD710 /* CaptionThis */ = {
 			isa = PBXGroup;
 			children = (
+				F2E1D0C9B8A7F6E5D4C3B2A1 /* Assets.xcassets */,
 				C89531526A3C2396C10B7E71 /* CaptionThis.entitlements */,
 				19B7518D3A24E90780138907 /* CaptionThisApp.swift */,
 				42787BF446C574A65FBB1F1B /* Info.plist */,
@@ -153,6 +156,7 @@
 			buildConfigurationList = 8CD3CD46F78077D089CA471E /* Build configuration list for PBXNativeTarget "CaptionThis" */;
 			buildPhases = (
 				D6A6920057571DFD4ABE5550 /* Sources */,
+				B3C4D5E6F7A8B9C0D1E2F3A4 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -189,7 +193,6 @@
 			);
 			mainGroup = 99BA76F667932961CDB1D56A;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -197,6 +200,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B3C4D5E6F7A8B9C0D1E2F3A4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D6A6920057571DFD4ABE5550 /* Sources */ = {
@@ -237,6 +251,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = CaptionThis/CaptionThis.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -244,6 +259,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CaptionThis/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CaptionThis;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -316,6 +333,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = CaptionThis/CaptionThis.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -323,6 +341,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CaptionThis/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CaptionThis;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
