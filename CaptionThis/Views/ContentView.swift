@@ -78,7 +78,7 @@ struct WindowAccessor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         DispatchQueue.main.async {
-            view.window?.level = isPinned ? .floating : .normal
+            view.window?.level = .normal
         }
         return view
     }
