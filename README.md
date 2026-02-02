@@ -10,6 +10,9 @@ This software was inspired by [Subtitle ME](https://serpentisei.gumroad.com/l/su
 - **Live translation** — Translates speech in real time as words are recognized, using Apple's on-device Translation framework
 - **Delayed translation** — Translates only after a sentence is finalized, producing more accurate results
 - **Multiple audio sources** — Capture audio from the microphone or from a specific application (e.g., Safari, Zoom, Discord)
+- **Screen recording (CaptureThis)** — Record your screen while transcribing, with configurable codec, resolution, bitrate, and frame rate. When capturing a specific application's audio, the recording automatically focuses on that app's windows only
+- **Auto-stop timer** — Set a duration in minutes and the recording stops automatically when time is up, with a live countdown displayed in the header
+- **Transcription and translation files** — When CaptureThis is enabled, transcriptions and translations are saved to timestamped text files alongside the video
 - **Four-panel display** — Separate panels for finalized transcript, in-progress transcript, finalized translation, and in-progress translation
 - **Supported languages** — English, French, Japanese, and Portuguese (Brazilian)
 - **Two-hop translation** — When a direct language pair is unavailable, translates through English as an intermediate step
@@ -46,6 +49,22 @@ No external dependencies are required.
 5. Press **Start** (or press Space) to begin transcription
 6. Finalized sentences appear in the "Final" panels; text currently being spoken appears in the "In Progress" panels
 7. Use the trash icon on each panel to clear its contents independently
+
+### CaptureThis (Screen Recording)
+
+1. Toggle the **CaptureThis** switch in the header bar to enable screen recording
+2. Click the **gear icon** next to the toggle to configure capture settings:
+   - **Output folder** — Where video and text files are saved (defaults to `~/Movies/CaptionThis/`)
+   - **Base file name** — Name used for the video and caption files
+   - **Video codec** — H.264 or HEVC (H.265)
+   - **Resolution** — 720p, 1080p, or native display resolution
+   - **Bitrate** — Low (2 Mbps), Medium (5 Mbps), or High (10 Mbps)
+   - **Frame rate** — 15, 24, or 30 fps
+3. Optionally set a **minutes** value in the header to auto-stop after a duration (0 = no limit)
+4. Press **Start** — the screen is recorded alongside the transcription
+5. When capturing audio from a specific application, the screen recording automatically captures only that application's windows
+6. Press **Complete** to finalize the recording, or let the auto-stop timer end it
+7. Video segments are merged into a single `.mov` file, and transcription/translation text files are saved in the same folder
 
 ## License
 
