@@ -11,17 +11,12 @@ struct CaptureSettingsView: View {
     @State private var draftVideoResolution: VideoResolution = .hd1080
     @State private var draftFrameRate: Int = 30
     @State private var draftOutputDirectory: URL = CaptureSettings.defaultOutputDirectory
-    @State private var draftIsEnabled: Bool = false
 
     @State private var showDirectoryExistsWarning = false
 
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                Section {
-                    Toggle("Enable Screen Capture", isOn: $draftIsEnabled)
-                }
-
                 Section("Output") {
                     TextField("Base File Name", text: $draftBaseFileName)
                         .textFieldStyle(.roundedBorder)
@@ -40,6 +35,7 @@ struct CaptureSettingsView: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .truncationMode(.middle)
+                            .help(draftOutputDirectory.path(percentEncoded: false))
                         Button("Choose...") {
                             chooseOutputDirectory()
                         }
@@ -49,6 +45,22 @@ struct CaptureSettingsView: View {
                             Image(systemName: "folder")
                         }
                         .help("Open in Finder")
+                    }
+
+                    if draftOutputDirectory != CaptureSettings.defaultOutputDirectory {
+                        HStack(spacing: 4) {
+                            Image(systemName: "info.circle")
+                                .foregroundStyle(.secondary)
+                            Text("Custom location. ")
+                                .foregroundStyle(.secondary)
+                            + Text("Reset to default (~/Movies/CaptionThis)")
+                                .foregroundStyle(.blue)
+                            Spacer()
+                        }
+                        .font(.caption)
+                        .onTapGesture {
+                            draftOutputDirectory = CaptureSettings.defaultOutputDirectory
+                        }
                     }
 
                     if directoryExists {
@@ -107,7 +119,7 @@ struct CaptureSettingsView: View {
             }
             .padding()
         }
-        .frame(width: 480, height: 460)
+        .frame(width: 480, height: 400)
         .onAppear {
             loadFromSettings()
         }
@@ -139,7 +151,6 @@ struct CaptureSettingsView: View {
     // MARK: - Actions
 
     private func loadFromSettings() {
-        draftIsEnabled = settings.captureIsEnabled
         draftBaseFileName = settings.captureBaseFileName
         draftVideoCodec = settings.captureVideoCodec
         draftVideoBitrate = settings.captureVideoBitrate
@@ -149,7 +160,6 @@ struct CaptureSettingsView: View {
     }
 
     private func save() {
-        settings.captureIsEnabled = draftIsEnabled
         settings.captureBaseFileName = draftBaseFileName.trimmingCharacters(in: .whitespacesAndNewlines)
         settings.captureVideoCodec = draftVideoCodec
         settings.captureVideoBitrate = draftVideoBitrate

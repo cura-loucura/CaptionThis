@@ -132,10 +132,8 @@ struct HeaderView: View {
 
                 Spacer()
 
-                // CaptureThis toggle
-                Button {
-                    showCaptureSettings = true
-                } label: {
+                // CaptureThis enable toggle
+                Toggle(isOn: $settings.captureIsEnabled) {
                     HStack(spacing: 4) {
                         if viewModel.isCapturing {
                             Image(systemName: "record.circle.fill")
@@ -150,8 +148,18 @@ struct HeaderView: View {
                         Text("CaptureThis")
                     }
                 }
+                .toggleStyle(.button)
                 .disabled(viewModel.isCapturing || viewModel.isProcessingVideo)
-                .help(viewModel.isCapturing ? "Recording in progress" : "Screen capture settings")
+                .help(viewModel.isCapturing ? "Recording in progress" : "Enable/disable screen capture")
+
+                // CaptureThis settings
+                Button {
+                    showCaptureSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .disabled(viewModel.isCapturing || viewModel.isProcessingVideo)
+                .help("Capture settings")
 
                 // Pin toggle
                 Toggle(isOn: $settings.isPinned) {

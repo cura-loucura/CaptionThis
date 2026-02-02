@@ -72,8 +72,8 @@ struct CaptureSettings {
     var outputDirectory: URL
 
     static let defaultOutputDirectory: URL = {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("CaptionThis/captured", isDirectory: true)
+        let movies = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first!
+        return movies.appendingPathComponent("CaptionThis", isDirectory: true)
     }()
 
     static let availableFrameRates = [15, 24, 30]

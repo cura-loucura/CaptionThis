@@ -278,6 +278,8 @@ extension SegmentRecorder: SCStreamOutput {
             if let audioInput, audioInput.isReadyForMoreMediaData {
                 audioInput.append(sampleBuffer)
             }
+        case .microphone:
+            break
         @unknown default:
             break
         }
