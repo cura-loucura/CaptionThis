@@ -340,9 +340,8 @@ final class CaptionViewModel {
                 captureFileManager?.appendTranslation(translated, timestamp: segments[index].timestamp)
             }
         } catch {
-            if settings.translationMode == .delayed {
-                showErrorMessage("Translation failed: \(error.localizedDescription)")
-            }
+            // Removed the check for delayed mode - now always shows error
+            showErrorMessage("Translation failed: \(error.localizedDescription)")
         }
     }
 

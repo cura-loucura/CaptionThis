@@ -14,6 +14,7 @@ final class SettingsState {
     private static let captureVideoResolutionKey = "captureVideoResolution"
     private static let captureFrameRateKey = "captureFrameRate"
     private static let captureOutputDirectoryKey = "captureOutputDirectory"
+    private static let captureMinutesKey = "captureMinutes"
 
     var inputLanguage: SupportedLanguage {
         didSet { UserDefaults.standard.set(inputLanguage.rawValue, forKey: Self.inputLanguageKey) }
@@ -68,6 +69,11 @@ final class SettingsState {
         didSet { UserDefaults.standard.set(captureOutputDirectory.path, forKey: Self.captureOutputDirectoryKey) }
     }
 
+    /// The number of minutes after which recording should automatically stop (0 = disabled)
+    var captureMinutes: Int {
+        didSet { UserDefaults.standard.set(captureMinutes, forKey: Self.captureMinutesKey) }
+    }
+
     /// Builds a `CaptureSettings` snapshot from the current persisted values.
     var captureSettings: CaptureSettings {
         get {
@@ -119,6 +125,7 @@ final class SettingsState {
            let mode = TranslationMode(rawValue: raw) {
             self.translationMode = mode
         } else {
+            // Default to live mode instead of delayed
             self.translationMode = .live
         }
 
@@ -160,5 +167,8 @@ final class SettingsState {
         } else {
             self.captureOutputDirectory = CaptureSettings.defaultOutputDirectory
         }
+
+        // New capture minutes setting
+        self.captureMinutes = defaults.integer(forKey: Self.captureMinutesKey)
     }
 }

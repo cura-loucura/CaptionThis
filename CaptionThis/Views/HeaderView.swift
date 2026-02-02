@@ -76,12 +76,32 @@ struct HeaderView: View {
                 // Translation mode toggle
                 if viewModel.settings.captionEnabled {
                     Picker("Mode", selection: $settings.translationMode) {
-                        ForEach(TranslationMode.allCases) { mode in
+                        // Only showing Live option now, removed Delayed
+                        ForEach([TranslationMode.live]) { mode in
                             Text(mode.displayName).tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 200)
+                }
+                // Capture minutes input - next to translation mode
+                if viewModel.settings.captionEnabled {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Minutes")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("Minutes", value: $settings.captureMinutes, format: .number)
+                            .frame(width: 60)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: settings.captureMinutes) { oldValue, newValue in
+                                // Ensure value stays within valid range 0-99
+                                if newValue < 0 {
+                                    settings.captureMinutes = 0
+                                } else if newValue > 99 {
+                                    settings.captureMinutes = 99
+                                }
+                            }
+                    }
                 }
 
                 // Translation download status
