@@ -10,6 +10,7 @@ final class CaptionViewModel {
     var isRunning: Bool = false
     var errorMessage: String = ""
     var showError: Bool = false
+    var showCaptureCompletion: Bool = false
     var availableApps: [SCRunningApplication] = []
     var translationStatus: String = ""
     var isPreparingTranslation: Bool = false
@@ -37,6 +38,20 @@ final class CaptionViewModel {
 
     let settings = SettingsState()
 
+    var isProcessingVideo: Bool {
+        if case .processing = videoProcessingService.state { return true }
+        return false
+    }
+
+    var videoProcessingProgress: Double {
+        videoProcessingService.progress
+    }
+
+    /// Whether CaptureThis is actively recording or paused (i.e. has an active session).
+    var isCapturing: Bool {
+        screenRecordingService.state != .idle
+    }
+
     // MARK: - Audio Source
 
     var selectedSource: AudioSource = .microphone {
@@ -52,6 +67,9 @@ final class CaptionViewModel {
 
     private let speechService = SpeechRecognitionService()
     private let translationService = TranslationService()
+    private let screenRecordingService = ScreenRecordingService()
+    private let videoProcessingService = VideoProcessingService()
+    private var captureFileManager: CaptureFileManager?
     private var audioCapture: (any AudioCaptureService)?
     private var pipelineTask: Task<Void, Never>?
     private var translationTask: Task<Void, Never>?
@@ -81,7 +99,11 @@ final class CaptionViewModel {
 
     func toggleRunning() {
         if isRunning {
-            stopPipeline()
+            if screenRecordingService.state != .idle {
+                showCaptureCompletion = true
+            } else {
+                stopPipeline()
+            }
         } else {
             Task { await startPipeline() }
         }
@@ -103,6 +125,8 @@ final class CaptionViewModel {
 
         isRunning = true
         audioCapture = createAudioCapture()
+        openCaptureFiles()
+        await startCapture()
 
         pipelineTask = Task { @MainActor in
             do {
@@ -134,6 +158,7 @@ final class CaptionViewModel {
                             if !newText.isEmpty {
                                 let segment = TranscriptionSegment(originalText: newText)
                                 segments.append(segment)
+                                captureFileManager?.appendTranscription(newText, timestamp: segment.timestamp)
                                 if settings.captionEnabled {
                                     await translateSegment(at: segments.count - 1)
                                 }
@@ -312,6 +337,7 @@ final class CaptionViewModel {
             )
             if index < segments.count {
                 segments[index].translatedText = translated
+                captureFileManager?.appendTranslation(translated, timestamp: segments[index].timestamp)
             }
         } catch {
             if settings.translationMode == .delayed {
@@ -353,6 +379,7 @@ final class CaptionViewModel {
 
         let segment = TranscriptionSegment(originalText: text)
         segments.append(segment)
+        captureFileManager?.appendTranscription(text, timestamp: segment.timestamp)
 
         // Snapshot the exact raw latestSegment from Apple at this moment.
         // Future partial results that start with this prefix will have it
@@ -510,5 +537,87 @@ final class CaptionViewModel {
 
     func cleanup() {
         stopPipeline()
+        closeCaptureFiles()
+        Task { await screenRecordingService.stop() }
+    }
+
+    // MARK: - Capture Lifecycle
+
+    /// Starts screen recording if CaptureThis is enabled.
+    private func startCapture() async {
+        guard settings.captureIsEnabled else { return }
+
+        // Validate the output directory is writable
+        let captureDir = settings.captureSettings.captureDirectory
+        let fm = FileManager.default
+        do {
+            try fm.createDirectory(at: captureDir, withIntermediateDirectories: true)
+        } catch {
+            showErrorMessage("Cannot create capture folder: \(error.localizedDescription)")
+            return
+        }
+        if !fm.isWritableFile(atPath: captureDir.path) {
+            showErrorMessage("The capture output folder is not writable. Please choose a different location in CaptureThis settings.")
+            return
+        }
+
+        do {
+            try await screenRecordingService.start(settings: settings.captureSettings)
+        } catch {
+            showErrorMessage("Screen recording failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Completes the capture session: stops everything, closes files, merges video, disables CaptureThis.
+    func completeCaptureAndStop() async {
+        showCaptureCompletion = false
+        stopPipeline()
+
+        // Capture segment URLs before stopping (stop resets the index)
+        let segmentURLs = screenRecordingService.segmentURLs()
+        let captureSettings = settings.captureSettings
+
+        await screenRecordingService.stop()
+        closeCaptureFiles()
+        settings.captureIsEnabled = false
+
+        if !segmentURLs.isEmpty {
+            await videoProcessingService.process(segmentURLs: segmentURLs, settings: captureSettings)
+            if case .failed(let message) = videoProcessingService.state {
+                showErrorMessage("Video processing failed: \(message)")
+            }
+            videoProcessingService.reset()
+        }
+    }
+
+    /// Pauses the capture: stops transcription pipeline and pauses recording.
+    /// Text files stay open. Next start creates a new numbered video segment.
+    func pauseCaptureAndStop() async {
+        showCaptureCompletion = false
+        stopPipeline()
+        await screenRecordingService.pause()
+    }
+
+    /// Cancels the completion dialog — returns to active recording.
+    func cancelCaptureCompletion() {
+        showCaptureCompletion = false
+    }
+
+    // MARK: - Capture File Management
+
+    /// Opens capture text files if CaptureThis is enabled and not already open.
+    private func openCaptureFiles() {
+        guard settings.captureIsEnabled, captureFileManager == nil else { return }
+        do {
+            captureFileManager = try CaptureFileManager(settings: settings.captureSettings)
+        } catch {
+            showErrorMessage("Failed to set up capture files: \(error.localizedDescription)")
+        }
+    }
+
+    /// Closes capture text files and releases the file handles.
+    private func closeCaptureFiles() {
+        captureFileManager?.close()
+        captureFileManager = nil
     }
 }

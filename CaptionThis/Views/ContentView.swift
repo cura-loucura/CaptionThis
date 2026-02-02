@@ -4,10 +4,11 @@ import Translation
 
 struct ContentView: View {
     @State private var viewModel = CaptionViewModel()
+    @State private var showCaptureSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
-            HeaderView(viewModel: viewModel)
+            HeaderView(viewModel: viewModel, showCaptureSettings: $showCaptureSettings)
 
             Divider()
 
@@ -38,6 +39,16 @@ struct ContentView: View {
                         onClear: { viewModel.clearInProgressTranslation() }
                     )
                 }
+
+                if viewModel.isProcessingVideo {
+                    VStack(spacing: 6) {
+                        ProgressView(value: viewModel.videoProcessingProgress)
+                            .progressViewStyle(.linear)
+                        Text("Processing video... \(Int(viewModel.videoProcessingProgress * 100))%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .padding()
         }
@@ -49,6 +60,19 @@ struct ContentView: View {
         }
         .onDisappear {
             viewModel.cleanup()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            viewModel.cleanup()
+        }
+        .sheet(isPresented: $showCaptureSettings) {
+            CaptureSettingsView(settings: viewModel.settings)
+        }
+        .sheet(isPresented: $viewModel.showCaptureCompletion) {
+            CaptureCompletionView(
+                onComplete: { Task { await viewModel.completeCaptureAndStop() } },
+                onContinueLater: { Task { await viewModel.pauseCaptureAndStop() } },
+                onCancel: { viewModel.cancelCaptureCompletion() }
+            )
         }
         .background(WindowAccessor(isPinned: viewModel.settings.isPinned))
         .onChange(of: viewModel.settings.isPinned) { _, isPinned in

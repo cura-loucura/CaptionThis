@@ -8,6 +8,12 @@ final class SettingsState {
     private static let translationModeKey = "translationMode"
     private static let isPinnedKey = "isPinned"
     private static let audioSourceIDKey = "audioSourceID"
+    private static let captureBaseFileNameKey = "captureBaseFileName"
+    private static let captureVideoCodecKey = "captureVideoCodec"
+    private static let captureVideoBitrateKey = "captureVideoBitrate"
+    private static let captureVideoResolutionKey = "captureVideoResolution"
+    private static let captureFrameRateKey = "captureFrameRate"
+    private static let captureOutputDirectoryKey = "captureOutputDirectory"
 
     var inputLanguage: SupportedLanguage {
         didSet { UserDefaults.standard.set(inputLanguage.rawValue, forKey: Self.inputLanguageKey) }
@@ -31,6 +37,59 @@ final class SettingsState {
 
     var audioSourceID: String {
         didSet { UserDefaults.standard.set(audioSourceID, forKey: Self.audioSourceIDKey) }
+    }
+
+    // MARK: - Capture Settings (persistent except isEnabled)
+
+    /// Not persisted — always false on app launch.
+    var captureIsEnabled: Bool = false
+
+    var captureBaseFileName: String {
+        didSet { UserDefaults.standard.set(captureBaseFileName, forKey: Self.captureBaseFileNameKey) }
+    }
+
+    var captureVideoCodec: VideoCodec {
+        didSet { UserDefaults.standard.set(captureVideoCodec.rawValue, forKey: Self.captureVideoCodecKey) }
+    }
+
+    var captureVideoBitrate: VideoBitrate {
+        didSet { UserDefaults.standard.set(captureVideoBitrate.rawValue, forKey: Self.captureVideoBitrateKey) }
+    }
+
+    var captureVideoResolution: VideoResolution {
+        didSet { UserDefaults.standard.set(captureVideoResolution.rawValue, forKey: Self.captureVideoResolutionKey) }
+    }
+
+    var captureFrameRate: Int {
+        didSet { UserDefaults.standard.set(captureFrameRate, forKey: Self.captureFrameRateKey) }
+    }
+
+    var captureOutputDirectory: URL {
+        didSet { UserDefaults.standard.set(captureOutputDirectory.path, forKey: Self.captureOutputDirectoryKey) }
+    }
+
+    /// Builds a `CaptureSettings` snapshot from the current persisted values.
+    var captureSettings: CaptureSettings {
+        get {
+            var s = CaptureSettings()
+            s.isEnabled = captureIsEnabled
+            s.baseFileName = captureBaseFileName
+            s.videoCodec = captureVideoCodec
+            s.videoBitrate = captureVideoBitrate
+            s.videoResolution = captureVideoResolution
+            s.frameRate = captureFrameRate
+            s.outputDirectory = captureOutputDirectory
+            return s
+        }
+        set {
+            captureIsEnabled = newValue.isEnabled
+            captureBaseFileName = newValue.baseFileName
+            captureVideoCodec = newValue.videoCodec
+            captureVideoBitrate = newValue.videoBitrate
+            captureVideoResolution = newValue.videoResolution
+            captureFrameRate = newValue.frameRate
+            captureOutputDirectory = newValue.outputDirectory
+        }
     }
 
     init() {
@@ -65,5 +124,41 @@ final class SettingsState {
 
         self.isPinned = defaults.bool(forKey: Self.isPinnedKey)
         self.audioSourceID = defaults.string(forKey: Self.audioSourceIDKey) ?? AudioSource.microphone.id
+
+        // Capture settings (persistent except isEnabled which defaults to false)
+        self.captureBaseFileName = defaults.string(forKey: Self.captureBaseFileNameKey) ?? "capture"
+
+        if let raw = defaults.string(forKey: Self.captureVideoCodecKey),
+           let codec = VideoCodec(rawValue: raw) {
+            self.captureVideoCodec = codec
+        } else {
+            self.captureVideoCodec = .hevc
+        }
+
+        if let raw = defaults.string(forKey: Self.captureVideoBitrateKey),
+           let bitrate = VideoBitrate(rawValue: raw) {
+            self.captureVideoBitrate = bitrate
+        } else {
+            self.captureVideoBitrate = .medium
+        }
+
+        if let raw = defaults.string(forKey: Self.captureVideoResolutionKey),
+           let resolution = VideoResolution(rawValue: raw) {
+            self.captureVideoResolution = resolution
+        } else {
+            self.captureVideoResolution = .hd1080
+        }
+
+        if defaults.object(forKey: Self.captureFrameRateKey) != nil {
+            self.captureFrameRate = defaults.integer(forKey: Self.captureFrameRateKey)
+        } else {
+            self.captureFrameRate = 30
+        }
+
+        if let path = defaults.string(forKey: Self.captureOutputDirectoryKey) {
+            self.captureOutputDirectory = URL(fileURLWithPath: path, isDirectory: true)
+        } else {
+            self.captureOutputDirectory = CaptureSettings.defaultOutputDirectory
+        }
     }
 }

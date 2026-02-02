@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HeaderView: View {
     @Bindable var viewModel: CaptionViewModel
+    @Binding var showCaptureSettings: Bool
 
     var body: some View {
         @Bindable var settings = viewModel.settings
@@ -97,6 +98,27 @@ struct HeaderView: View {
                 }
 
                 Spacer()
+
+                // CaptureThis toggle
+                Button {
+                    showCaptureSettings = true
+                } label: {
+                    HStack(spacing: 4) {
+                        if viewModel.isCapturing {
+                            Image(systemName: "record.circle.fill")
+                                .foregroundStyle(.red)
+                                .symbolEffect(.pulse, isActive: true)
+                        } else if viewModel.settings.captureIsEnabled {
+                            Image(systemName: "record.circle")
+                                .foregroundStyle(.red)
+                        } else {
+                            Image(systemName: "record.circle")
+                        }
+                        Text("CaptureThis")
+                    }
+                }
+                .disabled(viewModel.isCapturing || viewModel.isProcessingVideo)
+                .help(viewModel.isCapturing ? "Recording in progress" : "Screen capture settings")
 
                 // Pin toggle
                 Toggle(isOn: $settings.isPinned) {

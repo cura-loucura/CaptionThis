@@ -99,6 +99,7 @@ enum CaptureError: LocalizedError {
     case converterCreationFailed
     case screenCaptureNotAvailable
     case noDisplayFound
+    case recordingFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -110,6 +111,8 @@ enum CaptureError: LocalizedError {
             return "Screen capture is not available."
         case .noDisplayFound:
             return "No display found for screen capture."
+        case .recordingFailed(let reason):
+            return "Recording failed: \(reason)"
         }
     }
 }
