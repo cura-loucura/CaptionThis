@@ -11,7 +11,7 @@ This software was inspired by [Subtitle ME](https://serpentisei.gumroad.com/l/su
 - **Real-time transcription** — Speech is transcribed as you speak using Apple's on-device speech recognition, with automatic punctuation
 - **Live translation** — Translates speech in real time as words are recognized, using Apple's on-device Translation framework
 - **Delayed translation** — Translates only after a sentence is finalized, producing more accurate results
-- **Multiple audio sources** — Capture audio from the microphone or from a specific application (e.g., Safari, Zoom, DVD Player, Discord)
+- **Multiple audio sources** — Capture audio from the microphone or from a specific application (e.g., Safari, Zoom, VLC Player (DVD, video files), Discord)
 - **Screen recording (CaptureThis)** — Record your screen while transcribing, with configurable codec, resolution, bitrate, and frame rate. When capturing a specific application, the recording automatically focuses on that app's windows only
 - **Auto-stop timer** — Set a duration in minutes and the recording stops automatically when time is up, with a live countdown displayed in the header
 - **Transcription and translation files** — When CaptureThis is enabled, transcriptions and translations are saved to timestamped text files alongside the video
