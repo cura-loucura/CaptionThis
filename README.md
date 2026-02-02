@@ -6,6 +6,10 @@ This software was inspired by [Subtitle ME](https://serpentisei.gumroad.com/l/su
 
 ![App](./assets/capture_this.png)
 
+## Download
+
+[Download Latest Release](https://github.com/cura-loucura/CaptionThis/releases/latest)
+
 ## Features
 
 - **Real-time transcription** — Speech is transcribed as you speak using Apple's on-device speech recognition, with automatic punctuation
