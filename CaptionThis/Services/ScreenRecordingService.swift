@@ -182,11 +182,19 @@ final class SegmentRecorder: NSObject, @unchecked Sendable {
         audioInput = aInput
 
         // --- SCStream ---
-        let filter = SCContentFilter(
-            display: display,
-            excludingApplications: [],
-            exceptingWindows: []
-        )
+        let filter: SCContentFilter
+        if let targetApp = settings.targetApplication {
+            let appWindows = content.windows.filter {
+                $0.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
+            }
+            filter = SCContentFilter(display: display, including: appWindows)
+        } else {
+            filter = SCContentFilter(
+                display: display,
+                excludingApplications: [],
+                exceptingWindows: []
+            )
+        }
 
         let config = SCStreamConfiguration()
         config.width = videoWidth

@@ -606,7 +606,11 @@ final class CaptionViewModel {
         }
 
         do {
-            try await screenRecordingService.start(settings: settings.captureSettings)
+            var captureSettings = settings.captureSettings
+            if case .application(let app) = selectedSource {
+                captureSettings.targetApplication = app
+            }
+            try await screenRecordingService.start(settings: captureSettings)
             startCountdownTimer()
         } catch {
             showErrorMessage("Screen recording failed: \(error.localizedDescription)")

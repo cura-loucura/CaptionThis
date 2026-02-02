@@ -1,4 +1,5 @@
 import Foundation
+import ScreenCaptureKit
 
 enum VideoCodec: String, CaseIterable, Identifiable, Codable {
     case h264
@@ -70,6 +71,8 @@ struct CaptureSettings {
     var videoResolution: VideoResolution = .hd1080
     var frameRate: Int = 30
     var outputDirectory: URL
+    /// When set, screen recording captures only this application's windows.
+    var targetApplication: SCRunningApplication?
 
     static let defaultOutputDirectory: URL = {
         let movies = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first!
