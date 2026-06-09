@@ -90,6 +90,11 @@ final class VideoProcessingService {
             try await session.export(to: outputURL, as: .mp4)
             stopProgressMonitoring()
 
+            // Remove the per-segment intermediates now that the merged file is on disk.
+            for url in validURLs {
+                try? fm.removeItem(at: url)
+            }
+
             progress = 1.0
             state = .completed
         } catch {

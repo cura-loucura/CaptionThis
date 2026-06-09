@@ -644,7 +644,11 @@ final class CaptionViewModel {
 
         await screenRecordingService.stop()
         closeCaptureFiles()
-        settings.captureIsEnabled = false
+        // Roll the session name forward so the next recording lands in a new folder
+        // rather than overwriting the one we just finalized. Mode stays where the
+        // user set it — flipping back to "Transcript Only" silently hides where the
+        // just-saved video lives.
+        settings.captureBaseFileName = SettingsState.dateStampedSessionName()
 
         if !segmentURLs.isEmpty {
             await videoProcessingService.process(segmentURLs: segmentURLs, settings: captureSettings)

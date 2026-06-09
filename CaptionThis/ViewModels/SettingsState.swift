@@ -133,7 +133,7 @@ final class SettingsState {
         self.audioSourceID = defaults.string(forKey: Self.audioSourceIDKey) ?? AudioSource.microphone.id
 
         // Capture settings (persistent except isEnabled which defaults to false)
-        self.captureBaseFileName = defaults.string(forKey: Self.captureBaseFileNameKey) ?? "capture"
+        self.captureBaseFileName = defaults.string(forKey: Self.captureBaseFileNameKey) ?? Self.dateStampedSessionName()
 
         if let raw = defaults.string(forKey: Self.captureVideoCodecKey),
            let codec = VideoCodec(rawValue: raw) {
@@ -170,5 +170,12 @@ final class SettingsState {
 
         // New capture minutes setting
         self.captureMinutes = defaults.integer(forKey: Self.captureMinutesKey)
+    }
+
+    /// A fresh date-stamped session name like `capture_2026-06-09`.
+    static func dateStampedSessionName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "capture_\(formatter.string(from: Date()))"
     }
 }

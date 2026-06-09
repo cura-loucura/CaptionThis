@@ -180,12 +180,25 @@ final class SegmentRecorder: NSObject, @unchecked Sendable {
         audioInput = aInput
 
         // --- SCStream ---
+        // For app-scoped capture, pick the largest on-screen window of the target app
+        // and use a window-scoped filter so the source follows the window as it
+        // moves/resizes. Fall back to the display-scoped app filter if none is found.
         let filter: SCContentFilter
+        var windowAspect: CGFloat?
         if let targetApp = settings.targetApplication {
             let appWindows = content.windows.filter {
                 $0.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
             }
-            filter = SCContentFilter(display: display, including: appWindows)
+            let windowArea: (SCWindow) -> CGFloat = { $0.frame.width * $0.frame.height }
+            let bestWindow = appWindows
+                .filter { $0.isOnScreen && $0.frame.width > 100 && $0.frame.height > 100 }
+                .max { windowArea($0) < windowArea($1) }
+            if let bestWindow {
+                filter = SCContentFilter(desktopIndependentWindow: bestWindow)
+                windowAspect = bestWindow.frame.width / bestWindow.frame.height
+            } else {
+                filter = SCContentFilter(display: display, including: appWindows)
+            }
         } else {
             filter = SCContentFilter(
                 display: display,
@@ -199,11 +212,34 @@ final class SegmentRecorder: NSObject, @unchecked Sendable {
         config.height = videoHeight
         config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(settings.frameRate))
         config.pixelFormat = kCVPixelFormatType_32BGRA
-        config.showsCursor = true
+        config.showsCursor = false
         config.capturesAudio = true
         config.sampleRate = 48000
         config.channelCount = 2
         config.excludesCurrentProcessAudio = true
+
+        // Letterbox/pillarbox the window into the standard output canvas, preserving
+        // its aspect ratio so no content is cropped or stretched. The aspect is locked
+        // at start, so resizing the window mid-recording will scale within these bars.
+        if let windowAspect {
+            let canvasW = CGFloat(videoWidth)
+            let canvasH = CGFloat(videoHeight)
+            let canvasAspect = canvasW / canvasH
+            if windowAspect > canvasAspect {
+                let fitH = (canvasW / windowAspect).rounded()
+                config.destinationRect = CGRect(
+                    x: 0, y: ((canvasH - fitH) / 2).rounded(),
+                    width: canvasW, height: fitH
+                )
+            } else {
+                let fitW = (canvasH * windowAspect).rounded()
+                config.destinationRect = CGRect(
+                    x: ((canvasW - fitW) / 2).rounded(), y: 0,
+                    width: fitW, height: canvasH
+                )
+            }
+            config.backgroundColor = .black
+        }
 
         let scStream = SCStream(filter: filter, configuration: config, delegate: self)
         try scStream.addStreamOutput(self, type: .screen, sampleHandlerQueue: outputQueue)
