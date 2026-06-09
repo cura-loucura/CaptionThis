@@ -226,6 +226,8 @@ final class CaptionViewModel {
         speechPauseTask = nil
         committedRawPrefix = ""
         lastReceivedRawSegment = ""
+        activeTranslation = ""
+        inProgressTranslation = ""
         speechService.stopRecognition()
         Task {
             await audioCapture?.stopCapture()
@@ -355,8 +357,9 @@ final class CaptionViewModel {
                 segments[index].translatedText = translated
                 captureFileManager?.appendTranslation(translated, timestamp: segments[index].timestamp)
             }
+        } catch is CancellationError {
+            // Pipeline was cancelled (stop/restart/language change) — not a user-facing error.
         } catch {
-            // Removed the check for delayed mode - now always shows error
             showErrorMessage("Translation failed: \(error.localizedDescription)")
         }
     }
@@ -379,10 +382,13 @@ final class CaptionViewModel {
                 from: settings.inputLanguage,
                 to: settings.captionLanguage
             )
+            // Drop the result if we were cancelled while awaiting — otherwise a
+            // stale partial can land after stopPipeline cleared the UI.
+            guard !Task.isCancelled else { return }
             activeTranslation = translated
             inProgressTranslation = translated
         } catch {
-            // Swallow live translation errors
+            // Swallow live translation errors (including CancellationError).
         }
     }
 
